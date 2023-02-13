@@ -13,6 +13,7 @@
         <module>bd_07_phoenix</module>
         <module>bd_08_spark</module>
         <module>bd_09_flink</module>
+        <module>bd_10_tools</module>
     </modules>
     <modelVersion>4.0.0</modelVersion>
 
@@ -24,5 +25,28 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
+
+    <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/joinery/joinery-dataframe -->
+        <dependency>
+            <groupId>sh.joinery</groupId>
+            <artifactId>joinery-dataframe</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>3.17</version>
+        </dependency>
+
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.13</version>
+        </dependency>
+
+
+    </dependencies>
 
 </project>
