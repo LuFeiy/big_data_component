@@ -1,0 +1,63 @@
+# MR思维草稿
+
+# 1. 是什么
+MR(MapReduce),是一个分布式的计算框架,整个计算分为Map和Reduce阶段
+
+# 2. 架构
+和之前的HDFS不同的是,MR中的模块不是常驻的,有任务是会启动相关的线程,任务结束,线程也就结束了
+1. MrAPPMaster
+2. MapTask
+3. ReduceTask
+
+
+# 3. 整体的计算流程
+  现在有一个400M的txt文件,要做WordCount,代码已经写好打包了,那么执行命令之后是一个什么流程呢
+  1.Client 启动后通过YarnRunner想ResourceManager 申请运行任务
+  2.RM说可以运行任务,分配你一个标识application的id,还有你的作业信息提交的路径path
+  3.client就把作业信息上传到指定的路径(wc.jar程序,job.split切片文件,job.xml作业的其他信息)
+  4.上传完毕之后,client就想RM申请运行运行一个mrAPPMaster
+  5.RM也收到了这个请求,并把它初始化成为一个task,放到调度队列里面
+  6.有一个NodeManager领取到了上面的Task,于是就开始运行任务,创建容器Container,并在容器中启动了MrAPPMaster
+  7.Container把HDFS上的作业信息拷贝到本地, 好让MrAPPMaster知道该做什么
+  8.MrAPPMaster 向RM申请运行MapTask的资源(需要几个是在配置中说明了的)
+  9.RM将MapTask的任务分配给了其他的NodeManager(假设3个),另外两个NM领取任务并创建了容器
+  10.MrAPPMaster 向三个分配的NM发送程序的启动脚本,这三个NM就启动MapTask开始处理数据,数据处理完成后会落盘,按分区组织
+  11.所有的MapTask都处理完成了,MrAPPMaster就又开始向RM申请运行ReduceTask了
+  12.每个ReduceTask起来之后,就去MapTask上获取对应分区的数据,然后做计算处理
+  13.ReduceTask 处理完成之后就输出(通过OutputFormat类,也比较灵活)
+
+
+# 4. 流程细节补充
+  1.切片文件的生产是在client完成的,它应该是去读取了HDFS上的文件
+  2.Map操作
+    a.InputFormat:这里有一个有点奇特的地方,上述步骤中的切片文件是由InputFormat来完成的(不同的实现类对应不同的切片规则),同时真实数据文件也是由它来完成的
+    b.RecordReader: InputFormat会获取切片对应的真实数据封装到RecordReader对象中(key-value的迭代器)
+    c.某个类拿到RecordReader中的每个key-value,调用我们编写的map方法,并将结果数据到缓冲区Context中,这就是Map操作
+  3.Shuffle
+    字面意义就是混洗,在大数据中很多组件都有这个过程,MR中我们把map方法中,把k-v对放到context中之后称作shuffle的开始,到reduce拿数据之前,其实是包括了MR两端
+    1. Context的意思是上下文,也就是一个中间存储的位置,是位于内存中的一个java容器对象,在算法上抽象为一个环形的缓冲区
+    2. 在缓冲区在溢出写入磁盘时会有一个排序,用的是快排,二次排序,先按照分区,然后按照key(也就是word),
+    3. maptask完成切片的处理可能会经历多次的溢写,产生多个文件,最后会有一个merge操作,采用的是多路归并排序,最终一个maptask生成一个文件(应该是有索引)
+    4. 可选的combine操作,执行combine的作用就是减少记录量,等于是预先对同一个切片中的文件做了reduce操作(再每次溢写是和最终合并后都可以设置做该操作)
+    # 以上就是整个shuffle的过程
+  4.Reduce
+    对各个maptask处理的多个切片中的文件按照分区结果进行规约
+    1. 分区规则(默认)：是按照key的hashcode对设置的分区数取余得到的
+    2. 到一定时间后,会启动设置数量的reducetask,每个task都有编号,然后去各个maptask的节点获取自己分区的数据
+    3. 数据get过来(也是先缓存到内存中,快满了在写入磁盘),也会有一个merge并且排序的操作,因为各个分区是有序的,所以也是用的归并排序
+    4. 猜想排序之后中间还有一个封装过程,把数据按照key进行分组,得到 <Text key, Iterable<IntWritable>>这样的数据结构,交给用户定义的reduce函数
+    5. reduce处理也是写入到context,最终通过outputformat输出到指定的位置
+  5.OutputFormat输出
+
+
+
+# 5. 关于join
+  1. 怎么理解join
+  2. MapJoin
+  3. ReduceJoin
+
+# 其他知识
+  1. 序列化
+
+
+

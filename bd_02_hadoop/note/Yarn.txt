@@ -1,0 +1,17 @@
+# 1. 是什么
+  Yarn是一个分布式集群的资源管理的框架,程序处理需要资源(CPU,内存,磁盘,网络等),Yarn管理集群的计算资源,封装成为Container,供给需要计算的程序使用
+
+# 2. 架构
+  a. ResourceManager
+
+  b. NodeManager
+
+  c. Container
+
+  d. ApplicationMaster
+
+# 3. 资源调度器
+  实际生产中,有多个应用都要申请资源来运行,Yarn要提供一个机制来协调资源,这种机制也就是资源的调度,Yarn可配置几种资源调度
+  a. 先进先出FIFO的调度器：先到先得,小任务得等大任务执行完毕
+  b. 容量调度器(Capacity Scheduler,默认的)：预先留一点给小任务
+  c. 公平调度器(Fair Scheduler)：动态的,按队列分配,队列的job公平分配,高度配置化

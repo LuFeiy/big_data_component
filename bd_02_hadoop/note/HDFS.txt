@@ -1,0 +1,83 @@
+# HDFS思维草稿
+
+1. 是什么
+HDFS是一个分布式的存储系统,属于master/slave的主从结构，特点是可以运行在大量廉价的机器上,具有高容错的特点,存储数据量大PB级。
+
+2. 组成架构
+a. NameNode
+   管理名称空间和元数据
+b. DataNode
+   存储数据块,读写数据
+c. 2NN
+   负责定期做fsimage的合并,辅助NN故障处理
+d. QJM/NFS
+   给NN做高可用的
+e. Client
+   用户读写的入口,有shell和api两种方式
+
+
+3. NameNode工作方式
+a. 引入2NN存在的逻辑
+    1.Client经常要请求元数据,都存磁盘读写效率太慢了,所以存内存来提高效率
+    2.内存不稳定,重启就没了,元数据没了,集群就不可用了,所以磁盘中也要有一个备份这个备份就是fsimage
+    3.备份就存在一个同步问题,同时写内存和写磁盘效率同样低,所以引入了edits文件,写入内存之前先把操作写入edits,
+      追加写入效率很高,edits和fsimage通过特定的运算合并就是内存：edits+fsimage=os.metadata
+    4.上面步骤中的合并太耗费性能了,交给NN来做影响效率,所以引入一个辅助模块Secondary Name Node 简称2NN,2NN定期的
+      去拉取edits和fsimage做好性能的合并操作,把合并好的文件发送给NN,替换掉原来的成为新的fsimage
+b. fsimage合并的流程
+    1. 集群第一次启动的时候,会创建edits文件和fsimage(当然,它是一个空文件),如果不是第一次启动,那么NN会那这两个直接合并,同时滚动edits文件
+    2. 现在集群已经启动并且工作了,假设更新了很多元数据,那么edits文件也追加了很多操作,到了某个设置的checkpoint时间(通常60s),狗腿子2NN就过来
+       问：可以合并了吗?
+    3. NN这个时候就根据两个配置的参数做检查是否满足合并的条件 checkpoint.period(通常1h) checkpoint.txns(操作动作次数),满足一个就可以
+    4. 假设NN检查了满足条件,就会在返回的消息中说明,2NN收到这个消息,知道自己要开始干活了,就正式请求执行checkpoint操作了
+    5. NN收到请求,首先就是滚动一个edits.inprogress来,后续的操作写到这个文件里面
+    6. 2NN通过HTTP GET把之前的edits文件和fsimage文件下载下来(只有第一次要,准确来讲,第一次又是空文件,都可以不要的),下下来就开始合并运算,得到一个fsimage.checkpoint
+    7. 2NN通过Post的方式,把生成的文件发送给NN,同时给原来的edits给一个历史的名字,原来的fsimage可能也是这个操作,但会删除之前的(毕竟比较大,占磁盘),把新的edits和fsimage正名
+    8. 通过上述流程我们知道,2NN上的fsimage和NN上的后面都是一样的,也就是说后续的步骤,不再需要下载fsimage了
+
+    Q: 为什么第一次启动的时候要创建fsimage
+c. NameNode的故障处理(本质上就是把历史edits和fsimage拷过来)
+    方式1：手动把2NN上 namenode的元数据copy过来：使用scp命令
+          1. 如果namenode还有数据,先清空 rm -rf /opt/module/hadoop-2.7.2/data/tmp/dfs/name/*
+          2. 拷贝数据 scp -r upuptop@hadoop104:/opt/module/hadoop-2.7.2/data/tmp/dfs/namesecondary/* ./name/
+          3. 启动namenode sbin/hadoop-daemon.sh start namenode
+    方式2：通过-importCheckpoint启动namenode的守护线程,将2nn中的数据拷贝到namenode中
+          1. 修改hdfs-site.xml 将checkpoint的时间拉长(为什么要这么做)
+          2. 清空namenode中的数据
+          3. 拷贝整个namesecondary到namenode平级的位置
+          4. 通过命令导入检查点数据 bin/hdfs namenode -importCheckpoint (等待一会儿结束掉ctrl+c,这也是一个比较有意思的操作)
+          5. 启动namenode sbin/hadoop-daemon.sh start namenode
+
+    Q: 一般什么故障会导致需要这种从2NN恢复的情况,按照我的理解,再怎么宕机,磁盘上的文件还在的,这也就失去了从2NN拷贝过来的意义
+
+d. NameNode中的文件说明
+   1. namenode中元数据的存储位置在hdfs-site.xml中通过dfs.namenode.name.dir定义,通常文件夹名name
+   2. 里面有一个in_use.lock文件,它的作用是
+   3. 再就是current文件夹,里面除了edits和fsimage还有它的md5校验文件
+   4. current中另外还有两个文件seen_txid,VERSION
+
+e. nn的HA
+   核心就是有多个namenode,不再是大哥和小弟了,一个挂掉,另一个能马上起来工作,但这也引起了下面的一些问题
+   1. 元数据同步,利用NFS或QJM做共享存储系统
+
+   2. 合并的操作不是小弟2nn在做了
+
+   3. 状态维护(1active多standby) 利用zookeeper和ZKFC(ZKFailoverController,是一个独立的进程)
+      还涉及到HealthMonitor
+
+   4. 防止脑裂 split brain
+
+
+4. DataNode的工作方式
+a. 工作机制
+
+b. 节点上线与退役
+
+c. 一些常用的设置
+
+Q. 按照固定大小切分block,那么一行很容易被切割到两个block中,这不就破坏了数据吗
+
+5. 读写的流程
+a. 写数据流程
+
+b. 读数据流程
