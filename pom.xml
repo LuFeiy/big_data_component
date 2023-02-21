@@ -10,7 +10,7 @@
         <module>bd_04_zookeeper</module>
         <module>bd_05_hive</module>
         <module>bd_06_hbase</module>
-        <module>bd_07_phoenix</module>
+        <module>bd_07_elasticsearch</module>
         <module>bd_08_spark</module>
         <module>bd_09_flink</module>
         <module>bd_10_tools</module>

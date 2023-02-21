@@ -77,7 +77,9 @@ c. 一些常用的设置
 
 Q. 按照固定大小切分block,那么一行很容易被切割到两个block中,这不就破坏了数据吗
 
-5. 读写的流程
+5. 读数据流程
+   1.Client向NameNode发送读请求,NameNode检查元数据,给出DataNode的地址
+   2.Client
 a. 写数据流程
 
 b. 读数据流程

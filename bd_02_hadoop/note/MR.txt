@@ -52,7 +52,7 @@ MR(MapReduce),是一个分布式的计算框架,整个计算分为Map和Reduce�
 
 
 # 5. 关于join
-  1. 怎么理解join
+  1. 怎么理解join:需要把两份数据合并到一起处理,就是join.
   2. MapJoin
   3. ReduceJoin
 
