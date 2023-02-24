@@ -1,0 +1,27 @@
+# 1. what is spark
+  spark是一个综合性的大数据框架,和Hadoop相比,它缺少存储系统,自带资源管理系统也不常用(还是用yarn),但是其突出在计算的优化和对流式计算的支持已经支持SQL处理
+
+# 2. architecture(basic components)
+  spark is a master/slave mode data process framework,its has own ResourceManager,however is use yarn in most case.
+  Driver:
+
+
+
+  Executor
+
+  Client
+
+
+
+
+# 3. conception
+  Application
+
+  Job
+
+  State
+
+  Task
+
+# 1.
+
