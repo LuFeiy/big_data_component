@@ -16,4 +16,24 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.apache.zookeeper/zookeeper -->
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.9.1</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+        </dependency>
+
+
+
+    </dependencies>
+
 </project>

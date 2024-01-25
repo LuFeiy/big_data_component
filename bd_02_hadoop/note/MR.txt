@@ -54,7 +54,9 @@ MR(MapReduce),是一个分布式的计算框架,整个计算分为Map和Reduce�
 # 5. 关于join
   1. 怎么理解join:需要把两份数据合并到一起处理,就是join.
   2. MapJoin
+    适用于大表join小表的情况,将小表缓存,让每个maptask都能获取到小表的数据
   3. ReduceJoin
+    将关联条件作为key,把相同key的两部分数据都发送到同一个reducetask(最后是同一个reduce方法)中处理,核心是1.mapper中能区分数据来源 2.指定顺序
 
 # 其他知识
   1. 序列化
